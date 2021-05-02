@@ -15,27 +15,6 @@ redirect_uri = "http://127.0.0.1:8000/callback/"
 client_id = "190c59b4f1074e82bdb56ae09547ab22"
 client_secret = "4391e01cc3ee4baa8ce7e591b39d980c"
 
-
-def createOAuth():
-    sp_auth = SpotifyOAuth(
-        scope=scope,
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_uri=redirect_uri,
-        open_browser=True,
-    )
-    return sp_auth
-
-def validateToken(token_info):
-    sp_auth = createOAuth()
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    try:
-        if sp.me():
-            return token_info
-    except spotipy.client.SpotifyException:
-        token_info = sp_auth.validate_token(token_info)
-        return token_info
-
 class HomeView(TemplateView):
     """Home page"""
 
@@ -119,12 +98,15 @@ class TestView(TemplateView):
             sp = spotipy.Spotify(auth=token_info["access_token"])
             user_info_json = sp.me()
 
-            data = get_top_tracks(sp)
-
+            top_tracks = get_top_tracks(sp)
+            top_playlist = get_top_playlists(sp)
+            top_recently_played = get_recent_tracks(sp)
 
             context["user"] = user_info_json
             context["token_info"] = token_info
-            context["top_tracks"] = data
+            context["top_tracks"] = top_tracks
+            context["top_playlist"] = top_playlist
+            context["top_recent"] = top_recently_played
 
             return context
         except KeyError:
