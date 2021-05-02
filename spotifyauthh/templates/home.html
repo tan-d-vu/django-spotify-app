@@ -1,0 +1,17 @@
+hello this is home page where I introduce stuff
+
+{% if not user.display_name %}
+    <a href="{% url 'login' %}">login</a>
+{% endif %}
+<a href="{% url 'logout' %}">logout</a>
+
+<br>
+For Testing:
+{{ user }}
+<br>
+{{ token_info }}
+<br>
+{{ top_tracks.albums }}
+<br>
+<br>
+{{ top_tracks.year_released }}
