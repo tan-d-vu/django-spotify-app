@@ -23,7 +23,6 @@ def createOAuth():
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_uri,
-        open_browser=True,
     )
     return sp_auth
 
@@ -66,7 +65,6 @@ def get_top_tracks(sp):
 
             # Only get album name if it's not a 'single'
             if item["album"]["album_type"] != "SINGLE":
-                print(item["album"]["album_type"] + " " + item["name"])
                 album = item["album"]["name"]
                 albums.append(album)
             else:
@@ -137,9 +135,13 @@ def get_top_playlists(sp):
 
         offset += 19
 
+    # If there's no playlist
+    if playlist_count == 0:
+        return None
+
     data["playlist_count"] = playlist_count
 
-    # Get such playlist's duration
+    # Get playlist's duration
     duration = 0
     offset = 0
     while True:
@@ -170,13 +172,15 @@ def get_recent_tracks(sp):
     """Return current user's recent listened artist + albums
     accquired through 50 recent tracks/ however many recent tracks available
     """
-    data = {"artists": [], "albums":[]}
+    data = {"artists": [], "albums": [], "uri": []}
     artists = []
     albums = []
 
     recent_tracks = sp.current_user_recently_played()
     for item in recent_tracks["items"]:
-        item = item['track']
+        item = item["track"]
+
+        data["uri"].append(item["uri"])
 
         # Only get album name if it's not a 'single'
         if item["album"]["album_type"] != "SINGLE":
@@ -184,7 +188,7 @@ def get_recent_tracks(sp):
             albums.append(album)
 
         artists.append(item["artists"][0]["name"])
-    
+
     artists = [
         {"artist": item[0], "times_appear": item[1]}
         for item in Counter(artists).most_common()
@@ -194,11 +198,35 @@ def get_recent_tracks(sp):
         for item in Counter(albums).most_common()
     ]
 
-    data['artists'] = artists
-    data['albums'] = albums
+    data["artists"] = artists
+    data["albums"] = albums
 
     return data
 
+
+# Getting some audio features
+def get_audio_features(audio_features):
+    """Get average valence+ energy+ danceability+ instrumental of a set of tracks"""
+    valence = 0
+    energy = 0
+    danceability = 0
+    instrumental = 0
+    __audio_features = {}
+
+    for feature in audio_features:
+        valence += float(feature["valence"])
+        energy += float(feature["energy"])
+        instrumental += float(feature["instrumentalness"])
+        danceability += float(feature["danceability"])
+
+    avrg_danceability = danceability / len(audio_features)
+    avrg_instrumental = instrumental / len(audio_features)
+    avrg_energy = energy / len(audio_features)
+    avrg_valence = valence / len(audio_features)
     
+    __audio_features['valence'] = avrg_valence
+    __audio_features['energy'] = avrg_energy
+    __audio_features['danceability'] = avrg_danceability 
+    __audio_features['instrumentalness'] = avrg_instrumental
 
-
+    return __audio_features

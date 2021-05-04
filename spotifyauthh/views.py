@@ -1,30 +1,25 @@
-from django.shortcuts import render, redirect
-from requests import auth
 import spotipy
-from spotipy import oauth2
-from spotipy.oauth2 import SpotifyOAuth
 from django.views.generic.base import RedirectView, TemplateView
 from django.urls import reverse
 import urllib
 from spotifyauthh.utils import *
+import os
 # Create your views here.
 
-
-scope = "user-follow-read user-library-read user-library-read playlist-read-private user-read-recently-played user-top-read playlist-read-collaborative"
-redirect_uri = "http://127.0.0.1:8000/callback/"
-client_id = "190c59b4f1074e82bdb56ae09547ab22"
-client_secret = "4391e01cc3ee4baa8ce7e591b39d980c"
+def delCache():
+    if os.path.exists(".cache"):
+        os.remove(".cache")
 
 class HomeView(TemplateView):
     """Home page"""
 
     template_name = "home.html"
 
-
 class LoginView(RedirectView):
     """Login page"""
-
     # Users shouldn't see this page at all
+    delCache()
+
     # Redirect to callback url
     sp_auth = createOAuth()
 
@@ -43,16 +38,20 @@ class CallbackView(RedirectView):
         url = super().get_redirect_url(*args, **kwargs)
 
         # Hijack this method to cache token
+        sp_auth = createOAuth()
+
         # Get code from url
         code = self.request.GET.get("code", "")
 
-        # If successful, create sp_auth and get token
+        # If successful, get token
         if code != "":
-            sp_auth = createOAuth()
-            token_info = sp_auth.get_access_token(code)
+            token_info = sp_auth.get_access_token(code=code)
 
         if token_info:
+            self.request.session.clear()
             self.request.session["token"] = token_info
+            self.request.session.modified = True
+
             url = reverse("test")
             return url
         # TODO: Handle failed callback    
@@ -72,14 +71,14 @@ class LogOutView(RedirectView):
         url = reverse("home")
 
         # Hijack this method to delete cache token
-        del self.request.session["token"]
-        self.request.session.modified = True
+        self.request.session.pop("token")
+        delCache()
 
         return url
 
-
 class TestView(TemplateView):
     token_exist = True
+    is_sufficient = True
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -91,6 +90,7 @@ class TestView(TemplateView):
 
             # Recache if token info changes
             if token_info != self.request.session["token"]:
+                self.request.session.clear()
                 self.request.session["token"] = token_info
                 self.request.session.modified = True
 
@@ -98,9 +98,26 @@ class TestView(TemplateView):
             sp = spotipy.Spotify(auth=token_info["access_token"])
             user_info_json = sp.me()
 
-            top_tracks = get_top_tracks(sp)
             top_playlist = get_top_playlists(sp)
+
+            # Get recently played data
             top_recently_played = get_recent_tracks(sp)
+            if len(top_recently_played["uri"]) != 0:
+                __recent_audio_features = sp.audio_features(top_recently_played["uri"])
+                recent_audio_features = get_audio_features(__recent_audio_features)
+                context["recent_audio_features"] = recent_audio_features
+            # If there's no recently played => not enough data
+            else:
+                self.is_sufficient = False
+                return context
+
+
+            # Get top tracks data
+            top_tracks = get_top_tracks(sp)
+            if len(top_tracks["uri"]) != 0:
+                __top_audio_features = sp.audio_features(top_tracks["uri"])
+                top_audio_features = get_audio_features(__top_audio_features)
+                context["top_audio_features"] = top_audio_features
 
             context["user"] = user_info_json
             context["token_info"] = token_info
@@ -115,7 +132,7 @@ class TestView(TemplateView):
     
     def get_template_names(self):
         """ Return template name depending on token status"""
-        if self.token_exist:
+        if self.token_exist and self.is_sufficient:
             template_name = "home.html"
         else: 
             template_name = "error.html"
