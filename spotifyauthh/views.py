@@ -3,12 +3,10 @@ from django.views.generic.base import RedirectView, TemplateView
 from django.urls import reverse
 import urllib
 from spotifyauthh.utils import *
-import os
+import plotly
+import plotly.express as px
+import pandas as pd
 # Create your views here.
-
-def delCache():
-    if os.path.exists(".cache"):
-        os.remove(".cache")
 
 class HomeView(TemplateView):
     """Home page"""
@@ -71,7 +69,7 @@ class LogOutView(RedirectView):
         url = reverse("home")
 
         # Hijack this method to delete cache token
-        self.request.session.pop("token")
+        self.request.session.clear()
         delCache()
 
         return url
@@ -111,7 +109,6 @@ class TestView(TemplateView):
                 self.is_sufficient = False
                 return context
 
-
             # Get top tracks data
             top_tracks = get_top_tracks(sp)
             if len(top_tracks["uri"]) != 0:
@@ -124,6 +121,7 @@ class TestView(TemplateView):
             context["top_tracks"] = top_tracks
             context["top_playlist"] = top_playlist
             context["top_recent"] = top_recently_played
+            context["graph"] = getGraph(top_audio_features)
 
             return context
         except KeyError:
@@ -138,3 +136,14 @@ class TestView(TemplateView):
             template_name = "error.html"
         return template_name
 
+
+
+def getGraph(features):
+    # Return radar graph from a dict of audio features
+    # {'valence': x, 'energy': y, 'danceability': z, 'instrumentalness': m}
+    df = pd.DataFrame(dict(r = list(features.values()), theta = list(features.keys())))
+    fig = px.line_polar(df, r='r', theta='theta', line_close=True, width = 700, height = 700, range_r =[0,1])
+    fig.update_traces(fill='toself')
+    graph_div = plotly.offline.plot(fig, auto_open = False, output_type="div")
+
+    return graph_div
