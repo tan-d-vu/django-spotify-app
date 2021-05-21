@@ -2,6 +2,12 @@ from collections import Counter
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import os
+import plotly
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+
+
 
 """ Valence scale...
 80-100: Your songs are pretty happy! You must also be pretty happy! Strange...
@@ -10,12 +16,13 @@ import os
 30-59: Awww your music is a little sad. Just cheer up haha!
 0-29: Who hurt you?
 """
-#region Authentication...
+# region Authentication...
 client_id = "190c59b4f1074e82bdb56ae09547ab22"
 client_secret = "4391e01cc3ee4baa8ce7e591b39d980c"
 redirect_uri = "http://127.0.0.1:8000/callback/"
 
 scope = "user-follow-read user-library-read user-library-read playlist-read-private user-read-recently-played user-top-read playlist-read-collaborative"
+
 
 def createOAuth():
     sp_auth = SpotifyOAuth(
@@ -25,6 +32,7 @@ def createOAuth():
         redirect_uri=redirect_uri,
     )
     return sp_auth
+
 
 def delCache():
     # Deleting cache file before certain views...
@@ -41,7 +49,10 @@ def validateToken(token_info):
     except spotipy.client.SpotifyException:
         token_info = sp_auth.validate_token(token_info)
         return token_info
-#endregion
+
+
+# endregion
+
 
 def get_top_tracks(sp):
     """Return current user's top 10 tracks, along with
@@ -162,16 +173,20 @@ def get_top_playlists(sp):
 
         for item in playlist["items"]:
             # Get duration
-            duration += int(item["track"]["duration_ms"])
+            if item["track"] is not None: # Has to check because apparently it can be None???
+                duration += int(item["track"]["duration_ms"])
 
-            # Get non-local tracks' uri and count number of local tracks
-            if not item["track"]["is_local"]:     
-                non_local_tracks.append(item["track"]["uri"])
-            else:           
-                local_track += 1
+                # Get non-local tracks' uri and count number of local tracks
+                try:
+                    if not item["track"]["is_local"]:
+                        non_local_tracks.append(item["track"]["uri"])
+                    else:
+                        local_track += 1
+                except KeyError:
+                    pass
 
-            # Get time track was added to playlist
-            date_added.append(item["added_at"][0:7])
+                # Get time track was added to playlist
+                date_added.append(item["added_at"][0:7])
 
         offset += 100
 
@@ -181,8 +196,8 @@ def get_top_playlists(sp):
         "track_count": most_track_count,
         "image": sp.playlist_cover_image(playlist_id=top_playlist_uri),
         "uris": non_local_tracks,
-        "local_tracks" : local_track,
-        "common_date_added" : Counter(date_added).most_common(1),
+        "local_tracks": local_track,
+        "common_date_added": Counter(date_added).most_common(1),
     }
 
     data["top_playlist"] = top_playlist
@@ -200,16 +215,17 @@ def get_recent_tracks(sp):
 
     recent_tracks = sp.current_user_recently_played()
     for item in recent_tracks["items"]:
-        item = item["track"]
+        if item["track"] is not None: # Has to check because apparently it can be None???
+            item = item["track"]
 
-        data["uri"].append(item["uri"])
+            data["uri"].append(item["uri"])
 
-        # Only get album name if it's not a 'single'
-        if item["album"]["album_type"] != "SINGLE":
-            album = item["album"]["name"]
-            albums.append(album)
+            # Only get album name if it's not a 'single'
+            if item["album"]["album_type"] != "SINGLE":
+                album = item["album"]["name"]
+                albums.append(album)
 
-        artists.append(item["artists"][0]["name"])
+            artists.append(item["artists"][0]["name"])
 
     artists = [
         {"artist": item[0], "times_appear": item[1]}
@@ -228,17 +244,102 @@ def get_recent_tracks(sp):
 
 def get_audio_features(audio_features):
     """Get average valence+ energy+ danceability+ instrumental of a set of tracks"""
-    __audio_features = {}
+    __audio_features = {
+        "valence": 0,
+        "energy": 0,
+        "instrumentalness": 0,
+        "danceability": 0,
+    }
+
+    print("asdffffffffff")
 
     for feature in audio_features:
         __audio_features["valence"] += float(feature["valence"])
         __audio_features["energy"] += float(feature["energy"])
         __audio_features["instrumentalness"] += float(feature["instrumentalness"])
         __audio_features["danceability"] += float(feature["danceability"])
-        
+
     __audio_features["valence"] /= len(audio_features)
     __audio_features["energy"] /= len(audio_features)
     __audio_features["danceability"] /= len(audio_features)
     __audio_features["instrumentalness"] /= len(audio_features)
 
     return __audio_features
+
+
+def get_top_artists(sp):
+    """Get top artists and top genres"""
+    data = {"artists": [], "genres": [], "uri": []}
+    genres = []
+    offset = 0
+
+    while True:
+        results = sp.current_user_top_artists(
+            time_range="long_term", limit=50, offset=offset
+        )
+
+        if not results["items"]:
+            break
+
+        # Get first 10 top artists and list of genres of all top artists
+        for i, item in enumerate(results["items"]):
+            if i < 10:
+                artist = {
+                    "name": item["name"],
+                    "images": item["images"][0]["url"],
+                    "url": item["external_urls"]["spotify"],
+                }
+                data["artists"].append(artist)
+
+            data["uri"].append(item["uri"])
+            genres.extend(item["genres"])
+
+        offset += 50
+
+    # Top 5 genres
+    genres = Counter(genres).most_common(5)
+    data["genres"] = genres
+    data["artists"] = data["artists"]
+
+    return data
+
+
+def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
+    artist_based_rec = sp.recommendations(seed_artists=seed_artists, limit=10)
+    genre_based_rec = sp.recommendations(seed_genres=seed_genres, limit=10)
+    track_based_rec = sp.recommendations(seed_tracks=seed_tracks, limit=10)
+
+
+def get_polar_graph(features):
+    # Return polar graph from a dict of audio features
+    # {'valence': x, 'energy': y, 'danceability': z, 'instrumentalness': m}
+    df = pd.DataFrame(dict(r=list(features.values()), theta=list(features.keys())))
+    fig = px.line_polar(
+        df, r="r", theta="theta", line_close=True, width=700, height=700, range_r=[0, 1]
+    )
+    fig.update_traces(fill="toself")
+    graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
+
+    return graph_div
+
+def get_overlay_polar_graph(features):
+    # Return overlay polar graph from a list of dicts of audio features
+    categories = ['valence','energy','danceability','instrumentalness']
+    
+    fig = go.Figure()
+    
+    data = {"r":[], "theta":[], "set":[]}
+    for i, feature in enumerate(features):
+        data["r"].extend(list(feature.values()))
+        data["theta"].extend(list(feature.keys()))
+        data["set"] += [str("set"+str(i))] * len(feature)
+
+    df = pd.DataFrame(data=data)
+    
+    fig = px.line_polar(df, r="r", theta="theta", color="set", line_close=True, width=700, height=700, range_r=[0, 1])
+
+    fig.update_traces(fill="toself")
+
+
+    graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
+    return graph_div
