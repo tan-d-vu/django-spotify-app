@@ -251,8 +251,6 @@ def get_audio_features(audio_features):
         "danceability": 0,
     }
 
-    print("asdffffffffff")
-
     for feature in audio_features:
         __audio_features["valence"] += float(feature["valence"])
         __audio_features["energy"] += float(feature["energy"])
@@ -308,6 +306,9 @@ def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
     artist_based_rec = sp.recommendations(seed_artists=seed_artists, limit=10)
     genre_based_rec = sp.recommendations(seed_genres=seed_genres, limit=10)
     track_based_rec = sp.recommendations(seed_tracks=seed_tracks, limit=10)
+    print(artist_based_rec)
+    print(genre_based_rec)
+    print(track_based_rec)
 
 
 def get_polar_graph(features):
@@ -343,3 +344,18 @@ def get_overlay_polar_graph(features):
 
     graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
     return graph_div
+
+
+"""
+Un-cache-able parts: recent songs+ rec based on recent songs
+
+Cache-able parts: everything else
+Direction: Create a model with all fields needed to be cache
+Save user's uri + time the data was initially cached
+=> re-fetch every 2 weeks?
+
+Just plain model should work.
+
+Doesn't have to worry about unauthorized users because /analysis/ is redirected from 
+callback url
+"""

@@ -34,7 +34,7 @@ class CallbackView(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
         url = super().get_redirect_url(*args, **kwargs)
 
-        # Hijack this method to cache token
+        # Hijack this method to cache token (for current session)
         sp_auth = createOAuth()
 
         # Get code from url
@@ -86,7 +86,6 @@ class TestView(TemplateView):
             token_info = self.request.session["token"]
             token_info = validateToken(token_info)
         except KeyError:
-            print("key error")
             self.token_exist = False
             return context
     
@@ -100,8 +99,7 @@ class TestView(TemplateView):
         sp = spotipy.Spotify(auth=token_info["access_token"])
         user_info_json = sp.me()
 
-        print(user_info_json)
-
+        # Top playlists
         top_playlist = get_top_playlists(sp)
 
         # Get recently played data
@@ -109,11 +107,9 @@ class TestView(TemplateView):
         if len(top_recently_played["uri"]) != 0:
             __recent_audio_features = sp.audio_features(top_recently_played["uri"])
             recent_audio_features = get_audio_features(__recent_audio_features)
-            print(user_info_json)
-
             context["recent_audio_features"] = recent_audio_features
 
-        # If there's no recently played => not enough data
+        # If there's no recently played => not enough data to analyze
         else:
             self.is_sufficient = False
             return context
@@ -127,11 +123,8 @@ class TestView(TemplateView):
         
         top_artists = get_top_artists(sp)
 
-        genres = []
-        for genre in top_artists["genres"]:
-            genres.append(genre[0])
-    
-        get_song_recommendations(sp, top_artists["uri"][:5], genres, top_recently_played["uri"][:5])
+        # Get song recommendations
+        get_song_recommendations(sp, top_artists["uri"][:5], top_artists["genres"], top_recently_played["uri"][:5])
 
         #context["top_artists"] = top_artists
         context["user"] = user_info_json
@@ -142,7 +135,6 @@ class TestView(TemplateView):
         context["graph"] = get_polar_graph(top_audio_features)
         context["graph1"] = get_polar_graph(recent_audio_features)
         context["graph2"] = get_overlay_polar_graph([recent_audio_features, top_audio_features])
-
 
         return context
 
