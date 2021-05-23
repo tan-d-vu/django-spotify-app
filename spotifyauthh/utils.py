@@ -6,8 +6,7 @@ import plotly
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
-
-
+from itertools import zip_longest
 
 """ Valence scale...
 80-100: Your songs are pretty happy! You must also be pretty happy! Strange...
@@ -53,6 +52,16 @@ def validateToken(token_info):
 
 # endregion
 
+def __parse_track(track_info):
+    """Return track info from a payload entry"""
+    if track_info is not None:
+        return {
+            "name": track_info["name"],
+            "url": track_info["external_urls"]["spotify"],
+            "artists": ", ".join([i["name"] for i in track_info["album"]["artists"]]),
+            "images": track_info["album"]["images"][0]["url"],
+        }
+    else: return None
 
 def get_top_tracks(sp):
     """Return current user's top 10 tracks, along with
@@ -85,14 +94,11 @@ def get_top_tracks(sp):
                 albums.append(album)
             else:
                 album = "single"
+
             # Track info
-            track = {
-                "name": item["name"],
-                "album": album,
-                "url": item["external_urls"]["spotify"],
-                "artists": ", ".join([i["name"] for i in item["album"]["artists"]]),
-                "images": item["album"]["images"][0]["url"],
-            }
+            track = __parse_track(item)
+            track["album"] = album
+
             artists.extend(i["name"] for i in item["album"]["artists"])
             year_released.append(item["album"]["release_date"][0:4])
             data["tracks"].append(track)
@@ -173,7 +179,9 @@ def get_top_playlists(sp):
 
         for item in playlist["items"]:
             # Get duration
-            if item["track"] is not None: # Has to check because apparently it can be None???
+            if (
+                item["track"] is not None
+            ):  # Has to check because apparently it can be None???
                 duration += int(item["track"]["duration_ms"])
 
                 # Get non-local tracks' uri and count number of local tracks
@@ -215,7 +223,9 @@ def get_recent_tracks(sp):
 
     recent_tracks = sp.current_user_recently_played()
     for item in recent_tracks["items"]:
-        if item["track"] is not None: # Has to check because apparently it can be None???
+        if (
+            item["track"] is not None
+        ):  # Has to check because apparently it can be None???
             item = item["track"]
 
             data["uri"].append(item["uri"])
@@ -302,15 +312,7 @@ def get_top_artists(sp):
     return data
 
 
-def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
-    artist_based_rec = sp.recommendations(seed_artists=seed_artists, limit=10)
-    genre_based_rec = sp.recommendations(seed_genres=seed_genres, limit=10)
-    track_based_rec = sp.recommendations(seed_tracks=seed_tracks, limit=10)
-    print(artist_based_rec)
-    print(genre_based_rec)
-    print(track_based_rec)
-
-
+# region Data visualization
 def get_polar_graph(features):
     # Return polar graph from a dict of audio features
     # {'valence': x, 'energy': y, 'danceability': z, 'instrumentalness': m}
@@ -323,28 +325,39 @@ def get_polar_graph(features):
 
     return graph_div
 
+
 def get_overlay_polar_graph(features):
     # Return overlay polar graph from a list of dicts of audio features
-    categories = ['valence','energy','danceability','instrumentalness']
-    
+    categories = ["valence", "energy", "danceability", "instrumentalness"]
+
     fig = go.Figure()
-    
-    data = {"r":[], "theta":[], "set":[]}
+
+    data = {"r": [], "theta": [], "set": []}
     for i, feature in enumerate(features):
         data["r"].extend(list(feature.values()))
         data["theta"].extend(list(feature.keys()))
-        data["set"] += [str("set"+str(i))] * len(feature)
+        data["set"] += [str("set" + str(i))] * len(feature)
 
     df = pd.DataFrame(data=data)
-    
-    fig = px.line_polar(df, r="r", theta="theta", color="set", line_close=True, width=700, height=700, range_r=[0, 1])
+
+    fig = px.line_polar(
+        df,
+        r="r",
+        theta="theta",
+        color="set",
+        line_close=True,
+        width=700,
+        height=700,
+        range_r=[0, 1],
+    )
 
     fig.update_traces(fill="toself")
-
 
     graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
     return graph_div
 
+
+# endregion
 
 """
 Un-cache-able parts: recent songs+ rec based on recent songs
@@ -359,3 +372,35 @@ Just plain model should work.
 Doesn't have to worry about unauthorized users because /analysis/ is redirected from 
 callback url
 """
+
+
+def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
+    """ Return a list of dictionaries with:
+        - Songs rec that appear in artist based, genres based, tracks based 
+            rec function
+        - Songs that appear multiple times in each rec function
+    """
+
+    common_rec = {}
+    rec = {}
+    artist_based_rec = sp.recommendations(seed_artists=seed_artists, limit=100)
+    # Note: If user's genres are too niche, there may not be any genres-based rec
+    genre_based_rec = sp.recommendations(seed_genres=seed_genres, limit=100)
+    track_based_rec = sp.recommendations(seed_tracks=seed_tracks, limit=100)
+
+    for items in zip_longest(
+        artist_based_rec["tracks"],
+        genre_based_rec["tracks"],
+        track_based_rec["tracks"],
+    ):
+        # Track info
+        for item in items:
+            if item is not None:
+                track = __parse_track(item)
+                if (track["name"]) not in rec and len(rec) < 10:
+                    rec[track["name"]] = track
+                else: common_rec[track["name"]] = track
+    
+    print(common_rec)
+
+    return [rec, common_rec]

@@ -3,9 +3,7 @@ from django.views.generic.base import RedirectView, TemplateView
 from django.urls import reverse
 import urllib
 from spotifyauthh.utils import *
-import plotly
-import plotly.express as px
-import pandas as pd
+
 # Create your views here.
 
 class HomeView(TemplateView):
@@ -124,7 +122,16 @@ class TestView(TemplateView):
         top_artists = get_top_artists(sp)
 
         # Get song recommendations
-        get_song_recommendations(sp, top_artists["uri"][:5], top_artists["genres"], top_recently_played["uri"][:5])
+        seed_genres = []
+        for i in range(0, len(top_artists["genres"])):
+            seed_genres.append((top_artists["genres"][i][0]))
+
+        get_song_recommendations(sp, top_artists["uri"][:5], 
+                    seed_genres, 
+                    top_recently_played["uri"][:5])
+
+
+        
 
         #context["top_artists"] = top_artists
         context["user"] = user_info_json
@@ -134,7 +141,8 @@ class TestView(TemplateView):
         context["top_recent"] = top_recently_played
         context["graph"] = get_polar_graph(top_audio_features)
         context["graph1"] = get_polar_graph(recent_audio_features)
-        context["graph2"] = get_overlay_polar_graph([recent_audio_features, top_audio_features])
+        context["graph2"] = get_overlay_polar_graph([recent_audio_features, 
+                                                    top_audio_features])
 
         return context
 
