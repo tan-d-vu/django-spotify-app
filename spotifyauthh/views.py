@@ -5,9 +5,10 @@ import urllib
 from spotifyauthh.utils import *
 from .models import StatCache
 from django.core.exceptions import ObjectDoesNotExist
-
+import datetime
 
 # Create your views here.
+
 
 class HomeView(TemplateView):
     """Home page"""
@@ -108,7 +109,13 @@ class TestView(TemplateView):
         # Check if user is in database
         try:
             cached_stat = StatCache.objects.get(user_info=user_info_json)
-        # If not in db, get info from scratch and store in model
+
+            if (
+                datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
+            ).days >= 14:
+                raise ObjectDoesNotExist
+
+        # If not in db or been in there for long, get info from scratch and store in model
         except ObjectDoesNotExist:
             # Top playlists
             top_playlist = get_top_playlists(sp)
