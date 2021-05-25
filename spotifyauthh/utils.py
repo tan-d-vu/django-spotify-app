@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from itertools import zip_longest
+import itertools
 
 """ Valence scale...
 80-100: Your songs are pretty happy! You must also be pretty happy! Strange...
@@ -52,6 +53,7 @@ def validateToken(token_info):
 
 # endregion
 
+
 def __parse_track(track_info):
     """Return track info from a payload entry"""
     if track_info is not None:
@@ -61,7 +63,9 @@ def __parse_track(track_info):
             "artists": ", ".join([i["name"] for i in track_info["album"]["artists"]]),
             "images": track_info["album"]["images"][0]["url"],
         }
-    else: return None
+    else:
+        return None
+
 
 def get_top_tracks(sp):
     """Return current user's top 10 tracks, along with
@@ -252,25 +256,31 @@ def get_recent_tracks(sp):
     return data
 
 
-def get_audio_features(audio_features):
-    """Get average valence+ energy+ danceability+ instrumental of a set of tracks"""
+def get_audio_features(sp, uri):
+    """Get average audio features of a set of tracks"""
     __audio_features = {
         "valence": 0,
         "energy": 0,
         "instrumentalness": 0,
         "danceability": 0,
+        "acousticness" : 0,
     }
+
+    audio_features = sp.audio_features(uri)
 
     for feature in audio_features:
         __audio_features["valence"] += float(feature["valence"])
         __audio_features["energy"] += float(feature["energy"])
         __audio_features["instrumentalness"] += float(feature["instrumentalness"])
         __audio_features["danceability"] += float(feature["danceability"])
+        __audio_features["acousticness"] += float(feature["acousticness"])
+
 
     __audio_features["valence"] /= len(audio_features)
     __audio_features["energy"] /= len(audio_features)
     __audio_features["danceability"] /= len(audio_features)
     __audio_features["instrumentalness"] /= len(audio_features)
+    __audio_features["acousticness"] /= len(audio_features)
 
     return __audio_features
 
@@ -328,7 +338,7 @@ def get_polar_graph(features):
 
 def get_overlay_polar_graph(features):
     # Return overlay polar graph from a list of dicts of audio features
-    categories = ["valence", "energy", "danceability", "instrumentalness"]
+    categories = ["valence", "energy", "danceability", "instrumentalness", "acousticness"]
 
     fig = go.Figure()
 
@@ -375,12 +385,9 @@ callback url
 
 
 def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
-    """ Return a list of dictionaries with:
-        - Songs rec that appear in artist based, genres based, tracks based 
-            rec function
-        - Songs that appear multiple times in each rec function
+    """Return a dict with song recommendations
+    NOTE: method returns different output each time
     """
-
     common_rec = {}
     rec = {}
     artist_based_rec = sp.recommendations(seed_artists=seed_artists, limit=100)
@@ -399,8 +406,10 @@ def get_song_recommendations(sp, seed_artists, seed_genres, seed_tracks):
                 track = __parse_track(item)
                 if (track["name"]) not in rec and len(rec) < 10:
                     rec[track["name"]] = track
-                else: common_rec[track["name"]] = track
-    
-    print(common_rec)
+                else:
+                    common_rec[track["name"]] = track
 
-    return [rec, common_rec]
+    if len(common_rec) < 10:
+        return dict(itertools.islice((common_rec.update(rec)).items(), 10))
+    else:
+        return dict(itertools.islice(common_rec.items(), 10))

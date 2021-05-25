@@ -3,15 +3,21 @@ from django.views.generic.base import RedirectView, TemplateView
 from django.urls import reverse
 import urllib
 from spotifyauthh.utils import *
+from .models import StatCache
+from django.core.exceptions import ObjectDoesNotExist
+
 
 # Create your views here.
 
 class HomeView(TemplateView):
     """Home page"""
+
     template_name = "home.html"
+
 
 class LoginView(RedirectView):
     """Login page"""
+
     # Users shouldn't see this page at all
     delCache()
 
@@ -26,7 +32,8 @@ class LoginView(RedirectView):
 
 
 class CallbackView(RedirectView):
-    """ Callback page-- user shouldn't be seeing this page at all """
+    """Callback page-- user shouldn't be seeing this page at all"""
+
     # Callback page to which users are redirected after logging in
     # Redirect to analysis url
     def get_redirect_url(self, *args, **kwargs):
@@ -50,7 +57,7 @@ class CallbackView(RedirectView):
 
             url = reverse("test")
             return url
-        # TODO: Handle failed callback    
+        # TODO: Handle failed callback
         else:
             url = reverse("home")
             return url
@@ -72,6 +79,7 @@ class LogOutView(RedirectView):
 
         return url
 
+
 class TestView(TemplateView):
     token_exist = True
     is_sufficient = True
@@ -86,25 +94,45 @@ class TestView(TemplateView):
         except KeyError:
             self.token_exist = False
             return context
-    
+
         # Recache if token info changes
         if token_info != self.request.session["token"]:
             self.request.session.clear()
             self.request.session["token"] = token_info
             self.request.session.modified = True
 
-        # Create Spotify obj and get information
+        # Create Spotify obj
         sp = spotipy.Spotify(auth=token_info["access_token"])
         user_info_json = sp.me()
 
-        # Top playlists
-        top_playlist = get_top_playlists(sp)
+        # Check if user is in database
+        try:
+            cached_stat = StatCache.objects.get(user_info=user_info_json)
+        # If not in db, get info from scratch and store in model
+        except ObjectDoesNotExist:
+            # Top playlists
+            top_playlist = get_top_playlists(sp)
+
+            # Get top tracks data
+            top_tracks = get_top_tracks(sp)
+            if len(top_tracks["uri"]) != 0:
+                top_audio_features = get_audio_features(sp, top_tracks["uri"])
+
+            top_artists = get_top_artists(sp)
+
+            cached_stat = StatCache.objects.create(
+                top_artists=top_artists,
+                user_info=user_info_json,
+                top_tracks=top_tracks,
+                top_playlist=top_playlist,
+                top_audio_features=top_audio_features,
+            )
+            cached_stat.save()
 
         # Get recently played data
         top_recently_played = get_recent_tracks(sp)
         if len(top_recently_played["uri"]) != 0:
-            __recent_audio_features = sp.audio_features(top_recently_played["uri"])
-            recent_audio_features = get_audio_features(__recent_audio_features)
+            recent_audio_features = get_audio_features(sp, top_recently_played["uri"])
             context["recent_audio_features"] = recent_audio_features
 
         # If there's no recently played => not enough data to analyze
@@ -112,45 +140,39 @@ class TestView(TemplateView):
             self.is_sufficient = False
             return context
 
-        # Get top tracks data
-        top_tracks = get_top_tracks(sp)
-        if len(top_tracks["uri"]) != 0:
-            __top_audio_features = sp.audio_features(top_tracks["uri"])
-            top_audio_features = get_audio_features(__top_audio_features)
-            context["top_audio_features"] = top_audio_features
-        
-        top_artists = get_top_artists(sp)
-
         # Get song recommendations
         seed_genres = []
-        for i in range(0, len(top_artists["genres"])):
-            seed_genres.append((top_artists["genres"][i][0]))
+        for i in range(0, len((cached_stat.top_artists)["genres"])):
+            seed_genres.append(((cached_stat.top_artists)["genres"][i][0]))
 
-        get_song_recommendations(sp, top_artists["uri"][:5], 
-                    seed_genres, 
-                    top_recently_played["uri"][:5])
+        track_rec = get_song_recommendations(
+            sp,
+            (cached_stat.top_artists)["uri"][:5],
+            seed_genres,
+            top_recently_played["uri"][:5],
+        )
 
-
-        
-
-        #context["top_artists"] = top_artists
-        context["user"] = user_info_json
-        context["token_info"] = token_info
-        context["top_tracks"] = top_tracks
-        context["top_playlist"] = top_playlist
+        # Update context
         context["top_recent"] = top_recently_played
-        context["graph"] = get_polar_graph(top_audio_features)
+        context["top_artists"] = cached_stat.top_artists
+        context["user"] = user_info_json
+        context["top_tracks"] = cached_stat.top_tracks
+        context["top_playlist"] = cached_stat.top_playlist
+        # Graphs
+        context["graph"] = get_polar_graph(cached_stat.top_audio_features)
         context["graph1"] = get_polar_graph(recent_audio_features)
-        context["graph2"] = get_overlay_polar_graph([recent_audio_features, 
-                                                    top_audio_features])
+        context["graph2"] = get_overlay_polar_graph(
+            [recent_audio_features, (cached_stat.top_audio_features)]
+        )
+
+        context["track_rec"] = track_rec
 
         return context
 
-  
     def get_template_names(self):
-        """ Return template name depending on token status"""
+        """Return template name depending on token status"""
         if self.token_exist and self.is_sufficient:
             template_name = "home.html"
-        else: 
+        else:
             template_name = "error.html"
         return template_name
