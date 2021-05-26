@@ -56,7 +56,7 @@ class CallbackView(RedirectView):
             self.request.session.modified = True
             print("token stored")
 
-            url = reverse("test")
+            url = reverse("stat")
             return url
         # TODO: Handle failed callback
         else:
@@ -81,7 +81,7 @@ class LogOutView(RedirectView):
         return url
 
 
-class TestView(TemplateView):
+class StatView(TemplateView):
     token_exist = True
     is_sufficient = True
 
