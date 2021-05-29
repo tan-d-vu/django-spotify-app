@@ -182,7 +182,7 @@ class StatView(TemplateView):
     def get_template_names(self):
         """Return template name depending on token status"""
         if self.token_exist and self.is_sufficient:
-            template_name = "spotifyauthh/home.html"
+            template_name = "spotifyauthh/analysis.html"
         else:
             template_name = "spotifyauthh/error.html"
         return template_name
