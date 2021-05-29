@@ -13,7 +13,7 @@ import datetime
 class HomeView(TemplateView):
     """Home page"""
 
-    template_name = "home.html"
+    template_name = "spotifyauthh/home.html"
 
 
 class LoginView(RedirectView):
@@ -113,15 +113,16 @@ class StatView(TemplateView):
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
             ).days >= 14:
-                raise ObjectDoesNotExist
+                raise StatCache.DoesNotExist
 
         # If not in db or been in there for long, get info from scratch and store in model
-        except ObjectDoesNotExist:
+        except StatCache.DoesNotExist:
             # Top playlists
             top_playlist = get_top_playlists(sp)
 
             # Get top tracks data
             top_tracks = get_top_tracks(sp)
+            print(len(top_tracks["uri"]))
             if len(top_tracks["uri"]) != 0:
                 top_audio_features = get_audio_features(sp, top_tracks["uri"])
 
@@ -159,12 +160,14 @@ class StatView(TemplateView):
             top_recently_played["uri"][:5],
         )
 
-        # Update context
+        # Update other context
         context["top_recent"] = top_recently_played
         context["top_artists"] = cached_stat.top_artists
         context["user"] = user_info_json
         context["top_tracks"] = cached_stat.top_tracks
         context["top_playlist"] = cached_stat.top_playlist
+        context["pfp"] = cached_stat.user_info["images"][0]["url"]
+        context["top_audio_features"] = cached_stat.top_audio_features
         # Graphs
         context["graph"] = get_polar_graph(cached_stat.top_audio_features)
         context["graph1"] = get_polar_graph(recent_audio_features)
@@ -179,7 +182,7 @@ class StatView(TemplateView):
     def get_template_names(self):
         """Return template name depending on token status"""
         if self.token_exist and self.is_sufficient:
-            template_name = "home.html"
+            template_name = "spotifyauthh/home.html"
         else:
-            template_name = "error.html"
+            template_name = "spotifyauthh/error.html"
         return template_name

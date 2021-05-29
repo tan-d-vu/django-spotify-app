@@ -1,0 +1,8 @@
+{{ recent_tracks }}
+{{ user_info }}
+
+    hello this is home page where I introduce stuff 
+    {% if not user.display_name %}
+    <a href="{% url 'login' %}">login</a>
+    {% endif %}
+    <a href="{% url 'logout' %}">logout</a>

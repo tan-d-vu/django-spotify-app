@@ -8,14 +8,8 @@ import plotly.express as px
 import pandas as pd
 from itertools import zip_longest
 import itertools
+import datetime
 
-""" Valence scale...
-80-100: Your songs are pretty happy! You must also be pretty happy! Strange...
-60-79: Your music is above-average-ly happy. You are probably boring :///...
-50-59: Choose a lane...
-30-59: Awww your music is a little sad. Just cheer up haha!
-0-29: Who hurt you?
-"""
 # region Authentication...
 client_id = "190c59b4f1074e82bdb56ae09547ab22"
 client_secret = "4391e01cc3ee4baa8ce7e591b39d980c"
@@ -74,9 +68,9 @@ def get_top_tracks(sp):
         - year most of the tracks are from
     accquired through top 100 tracks/ however many top tracks available
     """
-    data = {"tracks": [], "uri": [], "artists": [], "albums": [], "year_released": []}
+    data = {"tracks": [], "uri": [], "artists": [], "albums": {}, "year_released": []}
     artists = []
-    albums = []
+    albums = {}
     year_released = []
 
     # Loop to get all top tracks
@@ -86,16 +80,39 @@ def get_top_tracks(sp):
             time_range="long_term", limit=50, offset=offset
         )
 
+        # Get top tracks in long/med/short term time frame
         if not results["items"]:
             break
+        else:
+            try:
+                med_term = sp.current_user_top_tracks(
+                    time_range="medium_term", limit=50, offset=offset
+                )
+                results["items"].extend(med_term["items"])
+
+                short_term = sp.current_user_top_tracks(
+                    time_range="short_term", limit=50, offset=offset
+                )
+
+                results["items"].extend(short_term["items"])
+            except TypeError:
+                pass
 
         for item in results["items"]:
             data["uri"].append(item["uri"])
-
+            track = __parse_track(item)
             # Only get album name if it's not a 'single'
             if item["album"]["album_type"] != "SINGLE":
                 album = item["album"]["name"]
-                albums.append(album)
+                if album in albums:
+                    albums[album]["times_appear"] += 1
+                else:
+                    albums[album] = {
+                        "name": album,
+                        "images": track["images"],
+                        "times_appear": 1,
+                        "url": item["album"]["external_urls"]["spotify"],
+                    }
             else:
                 album = "single"
 
@@ -114,16 +131,15 @@ def get_top_tracks(sp):
         {"artist": item[0], "times_appear": item[1]}
         for item in Counter(artists).most_common()
     ]
-    albums = [
-        {"album": item[0], "times_appear": item[1]}
-        for item in Counter(albums).most_common()
-    ]
+
     year_released = [
         {"year": item[0], "times_appear": item[1]}
         for item in Counter(year_released).most_common()
     ]
 
-    data["tracks"] = data["tracks"][:10]
+    data["tracks"] = (
+        data["tracks"][:10] + data["tracks"][100:110] + data["tracks"][200:210]
+    )
     data["uri"] = data["uri"]
     data["artists"] = artists
     data["albums"] = albums
@@ -161,6 +177,7 @@ def get_top_playlists(sp):
                 most_track_count = int(item["tracks"]["total"])
                 top_playlist_uri = item["uri"]
                 top_playlist_name = item["name"]
+                top_playlist_url = item["external_urls"]["spotify"]
 
         offset += 19
 
@@ -202,14 +219,26 @@ def get_top_playlists(sp):
 
         offset += 100
 
+    # Get top playlist durations in hours+minutes from miliseconds
+    duration = datetime.timedelta(minutes=int(duration / 1000 / 60))
+    total_seconds = int(duration.total_seconds())
+    hours, remainder = divmod(total_seconds, 60 * 60)
+    minutes = int(remainder / 60)
+
+    if hours == 0:
+        duration_str = "{} minutes".format(minutes)
+    else:
+        duration_str = "{} hours {} minutes".format(hours, minutes)
+
     top_playlist = {
         "name": top_playlist_name,
-        "duration": duration,
+        "duration": duration_str,
         "track_count": most_track_count,
         "image": sp.playlist_cover_image(playlist_id=top_playlist_uri),
         "uris": non_local_tracks,
         "local_tracks": local_track,
         "common_date_added": Counter(date_added).most_common(1),
+        "url":top_playlist_url,
     }
 
     data["top_playlist"] = top_playlist
@@ -225,7 +254,7 @@ def get_recent_tracks(sp):
     artists = []
     albums = []
 
-    recent_tracks = sp.current_user_recently_played()
+    recent_tracks = sp.current_user_recently_played(limit=50)
     for item in recent_tracks["items"]:
         if (
             item["track"] is not None
@@ -263,31 +292,43 @@ def get_audio_features(sp, uri):
         "energy": 0,
         "instrumentalness": 0,
         "danceability": 0,
-        "acousticness" : 0,
+        "acousticness": 0,
     }
 
-    audio_features = sp.audio_features(uri)
+    audio_features = []
+
+    if len(uri) < 100:
+        audio_features = sp.audio_features(uri[:100])
+    else:
+        for i in range(0, int(len(uri) / 10)):
+            audio_features.extend(sp.audio_features(uri[(100 * i) : (100 * (i + 1))]))
 
     for feature in audio_features:
-        __audio_features["valence"] += float(feature["valence"])
-        __audio_features["energy"] += float(feature["energy"])
-        __audio_features["instrumentalness"] += float(feature["instrumentalness"])
-        __audio_features["danceability"] += float(feature["danceability"])
-        __audio_features["acousticness"] += float(feature["acousticness"])
+        if feature is not None:
+            __audio_features["valence"] += float(feature["valence"])
+            __audio_features["energy"] += float(feature["energy"])
+            __audio_features["instrumentalness"] += float(feature["instrumentalness"])
+            __audio_features["danceability"] += float(feature["danceability"])
+            __audio_features["acousticness"] += float(feature["acousticness"])
 
-
-    __audio_features["valence"] /= len(audio_features)
-    __audio_features["energy"] /= len(audio_features)
-    __audio_features["danceability"] /= len(audio_features)
-    __audio_features["instrumentalness"] /= len(audio_features)
-    __audio_features["acousticness"] /= len(audio_features)
+    __audio_features["valence"] /= len(uri)
+    __audio_features["energy"] /= len(uri)
+    __audio_features["danceability"] /= len(uri)
+    __audio_features["instrumentalness"] /= len(uri)
+    __audio_features["acousticness"] /= len(uri)
 
     return __audio_features
 
 
 def get_top_artists(sp):
     """Get top artists and top genres"""
-    data = {"artists": [], "genres": [], "uri": []}
+    data = {
+        "artists": [],
+        "genres": [],
+        "uri": [],
+        "avrg_popularity": 0,
+        "pop_rate": "",
+    }
     genres = []
     offset = 0
 
@@ -298,16 +339,32 @@ def get_top_artists(sp):
 
         if not results["items"]:
             break
+        else:
+            try:
+                med_term = sp.current_user_top_artists(
+                    time_range="medium_term", limit=50, offset=offset
+                )
+                results["items"].extend(med_term["items"])
+
+                short_term = sp.current_user_top_artists(
+                    time_range="short_term", limit=50, offset=offset
+                )
+
+                results["items"].extend(short_term["items"])
+            except TypeError:
+                pass
 
         # Get first 10 top artists and list of genres of all top artists
         for i, item in enumerate(results["items"]):
-            if i < 10:
+            if i < 30:
                 artist = {
                     "name": item["name"],
                     "images": item["images"][0]["url"],
                     "url": item["external_urls"]["spotify"],
                 }
-                data["artists"].append(artist)
+                if artist not in data["artists"]:
+                    data["artists"].append(artist)
+                    data["avrg_popularity"] += item["popularity"]
 
             data["uri"].append(item["uri"])
             genres.extend(item["genres"])
@@ -317,8 +374,18 @@ def get_top_artists(sp):
     # Top 5 genres
     genres = Counter(genres).most_common(5)
     data["genres"] = genres
-    data["artists"] = data["artists"]
+    data["avrg_popularity"] = int(data["avrg_popularity"] / len(data["artists"]))
 
+    if 0 < data["avrg_popularity"] < 20:
+        data["pop_rate"] = "your music tatse is extremely obscure."
+    elif 20 < data["avrg_popularity"] < 40:
+        data[
+            "pop_rate"
+        ] = "you probably think of yourself as very quirky. That may be true, may be not."
+    elif 40 < data["avrg_popularity"] < 70:
+        data["pop_rate"] = "your taste is right in the middle... Kinda centrist."
+    else:
+        data["pop_rate"] = "you are a total normie."
     return data
 
 
@@ -338,7 +405,13 @@ def get_polar_graph(features):
 
 def get_overlay_polar_graph(features):
     # Return overlay polar graph from a list of dicts of audio features
-    categories = ["valence", "energy", "danceability", "instrumentalness", "acousticness"]
+    categories = [
+        "valence",
+        "energy",
+        "danceability",
+        "instrumentalness",
+        "acousticness",
+    ]
 
     fig = go.Figure()
 
