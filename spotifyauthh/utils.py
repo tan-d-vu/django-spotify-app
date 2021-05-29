@@ -117,7 +117,6 @@ def get_top_tracks(sp):
                 album = "single"
 
             # Track info
-            track = __parse_track(item)
             track["album"] = album
 
             artists.extend(i["name"] for i in item["album"]["artists"])
@@ -238,7 +237,7 @@ def get_top_playlists(sp):
         "uris": non_local_tracks,
         "local_tracks": local_track,
         "common_date_added": Counter(date_added).most_common(1),
-        "url":top_playlist_url,
+        "url": top_playlist_url,
     }
 
     data["top_playlist"] = top_playlist

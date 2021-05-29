@@ -18,7 +18,7 @@ from django.urls import path
 from spotifyauthh import views
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('home/', views.HomeView.as_view(), name='home'),
+    path('', views.HomeView.as_view(), name='home'),
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogOutView.as_view(), name='logout'),
     path('callback/', views.CallbackView.as_view(), name='callback'),

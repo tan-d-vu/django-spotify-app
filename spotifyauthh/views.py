@@ -148,17 +148,17 @@ class StatView(TemplateView):
             self.is_sufficient = False
             return context
 
-        # Get song recommendations
-        seed_genres = []
-        for i in range(0, len((cached_stat.top_artists)["genres"])):
-            seed_genres.append(((cached_stat.top_artists)["genres"][i][0]))
+        # # Get song recommendations
+        # seed_genres = []
+        # for i in range(0, len((cached_stat.top_artists)["genres"])):
+        #     seed_genres.append(((cached_stat.top_artists)["genres"][i][0]))
 
-        track_rec = get_song_recommendations(
-            sp,
-            (cached_stat.top_artists)["uri"][:5],
-            seed_genres,
-            top_recently_played["uri"][:5],
-        )
+        # track_rec = get_song_recommendations(
+        #     sp,
+        #     (cached_stat.top_artists)["uri"][:5],
+        #     seed_genres,
+        #     top_recently_played["uri"][:5],
+        # )
 
         # Update other context
         context["top_recent"] = top_recently_played
@@ -175,7 +175,7 @@ class StatView(TemplateView):
             [recent_audio_features, (cached_stat.top_audio_features)]
         )
 
-        context["track_rec"] = track_rec
+        # context["track_rec"] = track_rec
 
         return context
 
