@@ -11,11 +11,20 @@ import itertools
 import datetime
 
 # region Authentication...
-client_id = "190c59b4f1074e82bdb56ae09547ab22"
-client_secret = "4391e01cc3ee4baa8ce7e591b39d980c"
-# redirect_uri = "https://musiztaste.herokuapp.com/callback/"
-
-redirect_uri = "http://127.0.0.1:8000/callback/"
+# Read SECRET_KEY from an environment variable
+try:
+    redirect_uri = os.environ["REDIRECT_URI"]
+    client_id = os.environ["CLIENT_ID"]
+    client_secret = os.environ["SECRET"]
+except KeyError:
+    __location__ = os.path.realpath(
+        os.path.join(os.getcwd(), os.path.dirname(__file__))
+    )
+    with open(os.path.join(__location__, "creds.txt")) as f:
+        lines = [line.rstrip() for line in f]
+        client_id = lines[0]
+        client_secret = lines[1]
+        redirect_uri = lines[2]
 
 scope = "user-follow-read user-library-read user-library-read playlist-read-private user-read-recently-played user-top-read playlist-read-collaborative"
 

@@ -18,6 +18,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
@@ -25,10 +26,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 SECRET_KEY = "django-insecure--!f4n-j8xpeblqw@!u&mj+*4*dra0ig4b=xc!_hghp^stq*(_u"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
 ALLOWED_HOSTS = ["musiztaste.herokuapp.com", "127.0.0.1", "localhost"]
-
 
 # Application definition
 
