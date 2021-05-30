@@ -20,16 +20,22 @@ class LoginView(RedirectView):
     """Login page"""
 
     # Users shouldn't see this page at all
-    delCache()
+    def get_redirect_url(self, *args, **kwargs):
+        url = super().get_redirect_url(*args, **kwargs)
 
-    # Redirect to callback url
-    sp_auth = createOAuth()
+        # Hijack this method to delete cache token
+        self.request.session.flush()
+        self.request.session.modified = True
+        delCache()
 
-    redirect_url = sp_auth.get_authorize_url()
+        # Redirect to callback url
+        sp_auth = createOAuth()
 
-    redirect_url = urllib.parse.unquote(redirect_url)
+        redirect_url = sp_auth.get_authorize_url()
 
-    url = redirect_url
+        url = urllib.parse.unquote(redirect_url)
+
+        return url
 
 
 class CallbackView(RedirectView):
@@ -45,23 +51,25 @@ class CallbackView(RedirectView):
 
         # Get code from url
         code = self.request.GET.get("code", "")
+        print(code)
 
         # If successful, get token
         if code != "":
             token_info = sp_auth.get_access_token(code=code)
+            print(token_info)
 
-        if token_info:
-            self.request.session.flush()
-            self.request.session["token"] = token_info
-            self.request.session.modified = True
-            
-            # Create Spotify obj
-            sp = spotipy.Spotify(auth=token_info["access_token"])
-            user_info_json = sp.me()
-            print(user_info_json)
+            if token_info:
+                self.request.session.flush()
+                self.request.session["token"] = token_info
+                self.request.session.modified = True
 
-            url = reverse("stat")
-            return url
+                # Create Spotify obj
+                sp = spotipy.Spotify(auth=token_info["access_token"])
+                user_info_json = sp.me()
+                print(user_info_json)
+
+                url = reverse("stat")
+                return url
         else:
             url = reverse("home")
             return url

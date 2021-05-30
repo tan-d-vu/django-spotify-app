@@ -35,6 +35,7 @@ def createOAuth():
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_uri,
+        requests_session=False,
     )
     return sp_auth
 
