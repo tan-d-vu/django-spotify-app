@@ -63,24 +63,6 @@ class CallbackView(RedirectView):
             url = reverse("home")
             return url
 
-
-class LogOutView(RedirectView):
-    """Log Out view"""
-
-    # Users shouldn't see this page at all
-
-    # Redirect to home page
-    def get_redirect_url(self, *args, **kwargs):
-        url = super().get_redirect_url(*args, **kwargs)
-        url = reverse("home")
-
-        # Hijack this method to delete cache token
-        self.request.session.clear()
-        delCache()
-
-        return url
-
-
 class StatView(TemplateView):
     token_exist = True
     is_sufficient = True
@@ -98,7 +80,7 @@ class StatView(TemplateView):
 
         # Recache if token info changes
         if token_info != self.request.session["token"]:
-            self.request.session.clear()
+            self.request.session.flush()
             self.request.session["token"] = token_info
             self.request.session.modified = True
 
@@ -186,3 +168,20 @@ class StatView(TemplateView):
         else:
             template_name = "spotifyauthh/error.html"
         return template_name
+
+
+class LogOutView(RedirectView):
+    """Log Out view"""
+
+    # Users shouldn't see this page at all
+
+    # Redirect to home page
+    def get_redirect_url(self, *args, **kwargs):
+        url = super().get_redirect_url(*args, **kwargs)
+        url = reverse("home")
+
+        # Hijack this method to delete cache token
+        self.request.session.flush()
+        delCache()
+
+        return url
