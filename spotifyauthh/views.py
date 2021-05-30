@@ -46,24 +46,21 @@ class CallbackView(RedirectView):
         # Get code from url
         code = self.request.GET.get("code", "")
 
-        print("code in callback" + code)
-
         # If successful, get token
         if code != "":
             token_info = sp_auth.get_access_token(code=code)
-            print("token in callback" + token_info)
 
         if token_info:
             self.request.session.flush()
             self.request.session["token"] = token_info
             self.request.session.modified = True
-            print("token stored")
 
             url = reverse("stat")
             return url
         else:
             url = reverse("home")
             return url
+
 
 class StatView(TemplateView):
     token_exist = True
@@ -75,7 +72,6 @@ class StatView(TemplateView):
         # Get cached token from session and validate
         try:
             token_info = self.request.session["token"]
-            print(self.request.session)
             token_info = validateToken(token_info)
         except KeyError:
             self.token_exist = False
@@ -90,14 +86,10 @@ class StatView(TemplateView):
         # Create Spotify obj
         sp = spotipy.Spotify(auth=token_info["access_token"])
         user_info_json = sp.me()
-        print(user_info_json)
 
         # Check if user is in database
         try:
             cached_stat = StatCache.objects.get(user_info=user_info_json)
-
-            print(cached_stat)
-
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
             ).days >= 14:
@@ -110,7 +102,6 @@ class StatView(TemplateView):
 
             # Get top tracks data
             top_tracks = get_top_tracks(sp)
-            print(len(top_tracks["uri"]))
             if len(top_tracks["uri"]) != 0:
                 top_audio_features = get_audio_features(sp, top_tracks["uri"])
 
