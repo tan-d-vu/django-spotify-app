@@ -51,7 +51,7 @@ class CallbackView(RedirectView):
             token_info = sp_auth.get_access_token(code=code)
 
         if token_info:
-            self.request.session.clear()
+            self.request.session.flush()
             self.request.session["token"] = token_info
             self.request.session.modified = True
             print("token stored")
@@ -74,6 +74,7 @@ class StatView(TemplateView):
         try:
             token_info = self.request.session["token"]
             token_info = validateToken(token_info)
+            print(token_info)
         except KeyError:
             self.token_exist = False
             return context
@@ -87,11 +88,14 @@ class StatView(TemplateView):
         # Create Spotify obj
         sp = spotipy.Spotify(auth=token_info["access_token"])
         user_info_json = sp.me()
+        print(user_info_json)
 
         # Check if user is in database
         try:
             cached_stat = StatCache.objects.get(user_info=user_info_json)
 
+            print(cached_stat)
+            
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
             ).days >= 14:
@@ -182,6 +186,7 @@ class LogOutView(RedirectView):
 
         # Hijack this method to delete cache token
         self.request.session.flush()
+        self.request.session.modified = True
         delCache()
 
         return url
