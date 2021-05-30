@@ -46,9 +46,12 @@ class CallbackView(RedirectView):
         # Get code from url
         code = self.request.GET.get("code", "")
 
+        print("code in callback" + code)
+
         # If successful, get token
         if code != "":
             token_info = sp_auth.get_access_token(code=code)
+            print("token in callback" + token_info)
 
         if token_info:
             self.request.session.flush()
@@ -58,7 +61,6 @@ class CallbackView(RedirectView):
 
             url = reverse("stat")
             return url
-        # TODO: Handle failed callback
         else:
             url = reverse("home")
             return url
@@ -73,8 +75,8 @@ class StatView(TemplateView):
         # Get cached token from session and validate
         try:
             token_info = self.request.session["token"]
+            print(self.request.session)
             token_info = validateToken(token_info)
-            print(token_info)
         except KeyError:
             self.token_exist = False
             return context
@@ -95,7 +97,7 @@ class StatView(TemplateView):
             cached_stat = StatCache.objects.get(user_info=user_info_json)
 
             print(cached_stat)
-            
+
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
             ).days >= 14:
