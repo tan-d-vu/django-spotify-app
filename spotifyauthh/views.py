@@ -54,6 +54,11 @@ class CallbackView(RedirectView):
             self.request.session.flush()
             self.request.session["token"] = token_info
             self.request.session.modified = True
+            
+            # Create Spotify obj
+            sp = spotipy.Spotify(auth=token_info["access_token"])
+            user_info_json = sp.me()
+            print(user_info_json)
 
             url = reverse("stat")
             return url
