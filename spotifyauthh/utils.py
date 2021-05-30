@@ -63,12 +63,18 @@ def validateToken(token_info):
 def __parse_track(track_info):
     """Return track info from a payload entry"""
     if track_info is not None:
-        return {
-            "name": track_info["name"],
-            "url": track_info["external_urls"]["spotify"],
-            "artists": ", ".join([i["name"] for i in track_info["album"]["artists"]]),
-            "images": track_info["album"]["images"][0]["url"],
-        }
+        try:
+            return {
+                "name": track_info["name"],
+                "url": track_info["external_urls"]["spotify"],
+                "artists": ", ".join(
+                    [i["name"] for i in track_info["album"]["artists"]]
+                ),
+                "images": track_info["album"]["images"][0]["url"],
+            }
+        except IndexError:
+            return None
+
     else:
         return None
 
@@ -368,14 +374,17 @@ def get_top_artists(sp):
         # Get first 10 top artists and list of genres of all top artists
         for i, item in enumerate(results["items"]):
             if i < 30:
-                artist = {
-                    "name": item["name"],
-                    "images": item["images"][0]["url"],
-                    "url": item["external_urls"]["spotify"],
-                }
-                if artist not in data["artists"]:
-                    data["artists"].append(artist)
-                    data["avrg_popularity"] += item["popularity"]
+                try:
+                    artist = {
+                        "name": item["name"],
+                        "images": item["images"][0]["url"],
+                        "url": item["external_urls"]["spotify"],
+                    }
+                    if artist not in data["artists"]:
+                        data["artists"].append(artist)
+                        data["avrg_popularity"] += item["popularity"]
+                except IndexError:
+                    continue
 
             data["uri"].append(item["uri"])
             genres.extend(item["genres"])
