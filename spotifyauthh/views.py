@@ -15,6 +15,15 @@ class HomeView(TemplateView):
 
     template_name = "spotifyauthh/home.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        try:
+            if self.request.session["token"]:
+                context["is_logged_in"] = True
+                return context
+        except:
+            return context
 
 class LoginView(RedirectView):
     """Login page"""
