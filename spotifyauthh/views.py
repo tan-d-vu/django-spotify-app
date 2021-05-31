@@ -149,7 +149,7 @@ class StatView(TemplateView):
         context["user"] = user_info_json
         context["top_tracks"] = cached_stat.top_tracks
         context["top_playlist"] = cached_stat.top_playlist
-        context["pfp"] = cached_stat.user_info["images"][0]["url"]
+        # context["pfp"] = cached_stat.user_info["images"][0]["url"]
         context["top_audio_features"] = cached_stat.top_audio_features
         # Graphs
         context["graph"] = get_polar_graph(cached_stat.top_audio_features)

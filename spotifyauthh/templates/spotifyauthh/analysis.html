@@ -40,7 +40,12 @@
       </div>
       <div class="h-50 row">
         <div class="d-flex justify-content-center align-items-lg-center justify-content-lg-end col-lg">
-          <img src="{{ pfp }}" class="pfp" alt="Profile Picture" />
+          {% if user.images.0.url %}
+          <img src="{{ user.images.0.url }}" class="pfp" alt="Profile Picture" />
+          {% else %}
+          <img src="{% static 'spotifyauthh/imgs/default_pfp.PNG' %}" class="pfp" alt="Profile Picture" />
+
+          {% endif %}
         </div>
         <div class="align-self-lg-center col">
           <div class="row">
