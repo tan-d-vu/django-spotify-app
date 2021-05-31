@@ -24,8 +24,6 @@ class LoginView(RedirectView):
         url = super().get_redirect_url(*args, **kwargs)
 
         # Hijack this method to delete cache token
-        self.request.session.flush()
-        self.request.session.modified = True
         delCache()
 
         # Redirect to callback url
@@ -51,22 +49,15 @@ class CallbackView(RedirectView):
 
         # Get code from url
         code = self.request.GET.get("code", "")
-        print(code)
 
         # If successful, get token
         if code != "":
             token_info = sp_auth.get_access_token(code=code)
-            print(token_info)
 
             if token_info:
-                self.request.session.flush()
                 self.request.session["token"] = token_info
-                self.request.session.modified = True
 
-                # Create Spotify obj
-                sp = spotipy.Spotify(auth=token_info["access_token"])
-                user_info_json = sp.me()
-                print(user_info_json)
+                print(self.request.session["token"])
 
                 url = reverse("stat")
                 return url
@@ -82,6 +73,8 @@ class StatView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        print(self.request.session["token"])
+
         # Get cached token from session and validate
         try:
             token_info = self.request.session["token"]
@@ -92,9 +85,7 @@ class StatView(TemplateView):
 
         # Recache if token info changes
         if token_info != self.request.session["token"]:
-            self.request.session.flush()
             self.request.session["token"] = token_info
-            self.request.session.modified = True
 
         # Create Spotify obj
         sp = spotipy.Spotify(auth=token_info["access_token"])
@@ -192,7 +183,6 @@ class LogOutView(RedirectView):
 
         # Hijack this method to delete cache token
         self.request.session.flush()
-        self.request.session.modified = True
         delCache()
 
         return url

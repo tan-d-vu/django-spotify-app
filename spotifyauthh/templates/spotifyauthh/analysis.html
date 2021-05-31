@@ -22,10 +22,7 @@
     ></script>
 
     <!-- Google Fonts -->
-    <link
-      href="https://fonts.googleapis.com/css?family=Montserrat&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet" />
     <!-- Custom -->
     <link rel="stylesheet" href="{% static 'spotifyauthh/style.css' %}" />
     <script src="{% static 'spotifyauthh/script.js' %}" defer></script>
@@ -38,25 +35,28 @@
   <body>
     <!-- Welcom + User information -->
     <div class="vh-100 container-fluid">
-      <div class="d-flex align-items-center h-25 row">
+      <div class="d-flex align-items-lg-center h-25 row">
         <h1 class="text-center">Welcome, {{ user.display_name }}!</h1>
       </div>
       <div class="h-50 row">
-        <div class="d-flex align-items-center justify-content-end col">
+        <div class="d-flex justify-content-center align-items-lg-center justify-content-lg-end col-lg">
           <img src="{{ pfp }}" class="pfp" alt="Profile Picture" />
         </div>
-        <div class="align-self-center col">
-          <h2>
-            <a
-              class="text-decoration-none text-reset"
-              href="{{ user.external_urls.spotify }}"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {{ user.display_name }}
-            </a>
-          </h2>
-          <h2>Followers: {{ user.followers.total }}</h2>
+        <div class="align-self-lg-center col">
+          <div class="row">
+            <div class="col d-flex justify-content-center justify-content-lg-start">
+              <h2>
+                <a class="text-decoration-none text-reset" href="{{ user.external_urls.spotify }}" target="_blank" rel="noopener noreferrer">
+                  {{ user.display_name }}
+                </a>
+              </h2>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col d-flex justify-content-center justify-content-lg-start">
+              <h2>Followers: {{ user.followers.total }}</h2>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -64,39 +64,22 @@
     <!-- Top songs -->
     <div class="container-fluid" id="top_tracks">
       <div class="row bg-white">
-        <div class="col-5">
-          <h1 class="ps-5" id="top_tracks_title">
-            Since you probably listen to them all the time, here are your top
-            songs over the years.
+        <div class="col-lg-5">
+          <h1 class="ps-lg-5 ps-md-0" id="top_tracks_title">
+            Since you probably listen to them all the time, here are your top songs over the years.
           </h1>
         </div>
 
-        <div class="col-7">
+        <div class="col-lg-7">
           {% for track in top_tracks.tracks %}
           <div class="pb-2 row">
-            <div class="d-flex align-items-center justify-content-end col-4">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ track.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  class="coverart"
-                  src="{{ track.images }}"
-                  alt="{{ track.name }} coverart"
-                />
+            <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-4">
+              <a class="text-decoration-none text-reset" href="{{ track.url }}" target="_blank" rel="noopener noreferrer">
+                <img class="coverart" src="{{ track.images }}" alt="{{ track.name }} coverart" />
               </a>
             </div>
-            <div class="align-self-center col">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ track.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ track.name }}
-              </a>
+            <div class="align-self-lg-center col-lg">
+              <a class="text-decoration-none text-reset" href="{{ track.url }}" target="_blank" rel="noopener noreferrer"> {{ track.name }} </a>
               <br />
               - {{ track.artists }}
             </div>
@@ -109,20 +92,16 @@
     <!-- Year -->
     <div class="vh-100 container pb-5">
       <div id="top_year">
-        <div class="row justify-content-end">
-          <div class="col-7">
-            <h1 class="text-end">
-              {{ top_tracks.year_released.0.year }} was definitely a great year
-              for you, music-wise.
-            </h1>
+        <div class="row justify-content-lg-end">
+          <div class="col-lg-7">
+            <h1 class="text-end">{{ top_tracks.year_released.0.year }} was definitely a great year for you, music-wise.</h1>
           </div>
         </div>
 
-        <div class="row justify-content-end">
-          <div class="col-7">
+        <div class="row justify-content-lg-end">
+          <div class="col-lg-7">
             <h2 class="text-end">
-              {{ top_tracks.year_released.0.times_appear }} out of your top 300
-              songs were released in {{ top_tracks.year_released.0.year }}.
+              {{ top_tracks.year_released.0.times_appear }} out of your top 300 songs were released in {{ top_tracks.year_released.0.year }}.
             </h2>
           </div>
         </div>
@@ -132,39 +111,23 @@
     <!-- Top Albums -->
     <div class="container-fluid mt-5" id="top_albums">
       <div class="row bg-white">
-        <div class="col-7">
+        <div class="col-lg-4">
+          <h1 class="text-end" id="top_albums_title">While we are at it, you listen to these albums A LOT.</h1>
+        </div>
+
+        <div class="col-lg-7">
           {% for album, data in top_tracks.albums.items %}
           <div class="pb-2 row">
-            <div class="d-flex align-items-center justify-content-end col-5">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ data.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  class="coverart"
-                  src="{{ data.images }}"
-                  alt="{{ album }} coverart"
-                />
+            <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-5">
+              <a class="text-decoration-none text-reset" href="{{ data.url }}" target="_blank" rel="noopener noreferrer">
+                <img class="coverart" src="{{ data.images }}" alt="{{ album }} coverart" />
               </a>
             </div>
-            <div class="align-self-center col">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ data.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                >{{ album }}
-              </a>
+            <div class="align-self-lg-center col-lg">
+              <a class="text-decoration-none text-reset" href="{{ data.url }}" target="_blank" rel="noopener noreferrer">{{ album }} </a>
             </div>
           </div>
           {% endfor %}
-        </div>
-        <div class="col-4">
-          <h1 class="text-end" id="top_albums_title">
-            While we are at it, you listen to these albums A LOT.
-          </h1>
         </div>
       </div>
     </div>
@@ -172,37 +135,19 @@
     <!-- Top Artists -->
     <div class="container-fluid mt-5" id="top_artists">
       <div class="row bg-white">
-        <div class="col-4">
-          <h1 class="text-end" id="top_artists_title">
-            And you LOVE these artists.
-          </h1>
+        <div class="col-lg-4">
+          <h1 class="text-end" id="top_artists_title">And you LOVE these artists.</h1>
         </div>
-        <div class="col-7">
+        <div class="col-lg-7">
           {% for artist in top_artists.artists %}
           <div class="pb-2 row">
-            <div class="d-flex align-items-center justify-content-end col-5">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ artist.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  class="coverart"
-                  src="{{ artist.images }}"
-                  alt="{{ artist.name }} coverart"
-                />
+            <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-5">
+              <a class="text-decoration-none text-reset" href="{{ artist.url }}" target="_blank" rel="noopener noreferrer">
+                <img class="coverart" src="{{ artist.images }}" alt="{{ artist.name }} coverart" />
               </a>
             </div>
-            <div class="align-self-center col">
-              <a
-                class="text-decoration-none text-reset"
-                href="{{ artist.url }}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ artist.name }}
-              </a>
+            <div class="align-self-lg-center col-lg">
+              <a class="text-decoration-none text-reset" href="{{ artist.url }}" target="_blank" rel="noopener noreferrer"> {{ artist.name }} </a>
             </div>
           </div>
           {% endfor %}
@@ -216,34 +161,32 @@
       </div>
 
       <div class="row mt-5">
-        <div class="col-5">
-          <div class="row bg-white justify-content-end">
-            <div class="col-10">
+        <div class="col-lg-5">
+          <div class="row bg-white justify-content-lg-end">
+            <div class="col-lg-10">
               <h1 id="other_logistics_title">Among your top songs...</h1>
             </div>
           </div>
 
           {% for artist in top_tracks.artists|slice:":5" %}
-          <div class="row bg-white justify-content-end">
-            <div class="col-9">
+          <div class="row bg-white justify-content-lg-end">
+            <div class="col-lg-9">
               <h2>{{ artist.times_appear }} are from {{ artist.artist }}</h2>
             </div>
           </div>
           {% endfor %}
         </div>
 
-        <div class="col-5 pt-5">
-          <div class="row bg-white justify-content-end">
-            <div class="col-10">
-              <h1 id="top_artists_title2">
-                A lot of those songs are in the genres of...
-              </h1>
+        <div class="col-lg-5 pt-5">
+          <div class="row bg-white justify-content-lg-end">
+            <div class="col-lg-10">
+              <h1 id="top_artists_title2">A lot of those songs are in the genres of...</h1>
             </div>
           </div>
 
           {% for genre in top_artists.genres %}
-          <div class="row bg-white justify-content-end">
-            <div class="col-9">
+          <div class="row bg-white justify-content-lg-end">
+            <div class="col-lg-9">
               <h2>{{ genre.0 }}</h2>
             </div>
           </div>
@@ -252,44 +195,33 @@
       </div>
 
       <div class="pt-5 row">
-        <div class="pt-5 col">
+        <div class="pt-5 col-lg">
           <br />
-          <h1>
-            With an average popularity score of {{top_artists.avrg_popularity}}
-            among your favourite artists,
-          </h1>
+          <h1>With an average popularity score of {{top_artists.avrg_popularity}} among your favourite artists,</h1>
           <h1>{{ top_artists.pop_rate }}</h1>
         </div>
       </div>
 
-      <div class="pt-5 row justify-content-end">
-        <div class="pt-5 col-3">
+      <div class="pt-5 row justify-content-lg-end">
+        <div class="pt-5 col-lg-3">
           <a
             class="text-decoration-none text-reset text-align-start"
             href="{{ top_playlist.top_playlist.url }}"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <img
-              class="coverart-bg"
-              src="{{ top_playlist.top_playlist.image.0.url }}"
-              alt="{{ top_playlist.top_playlist.name }} coverart"
-            />
+            <img class="coverart-bg" src="{{ top_playlist.top_playlist.image.0.url }}" alt="{{ top_playlist.top_playlist.name }} coverart" />
           </a>
         </div>
 
-        <div class="pt-5 col-7">
+        <div class="pt-5 col-lg-7">
           <h1>Among your {{ top_playlist.playlist_count }} playlist(s),</h1>
-          <h2>
-            the longest is {{top_playlist.top_playlist.name}} with a whooping
-            {{top_playlist.top_playlist.track_count}} tracks
-          </h2>
+          <h2>the longest is {{top_playlist.top_playlist.name}} with a whooping {{top_playlist.top_playlist.track_count}} tracks</h2>
 
           <h2>and is {{top_playlist.top_playlist.duration}} long.</h2>
 
           <h2>
-            You added {{top_playlist.top_playlist.common_date_added.0.1}} songs
-            to this playlist in
+            You added {{top_playlist.top_playlist.common_date_added.0.1}} songs to this playlist in
             {{top_playlist.top_playlist.common_date_added.0.0}} .
           </h2>
         </div>
@@ -297,7 +229,7 @@
     </div>
     <div class="container-fluid pt-5" id="the_end">
       <div class="pt-5 row">
-        <div class="col-7 pt-5">
+        <div class="col-lg-7 pt-5">
           <h1>The end...</h1>
           <a> pls im still working on more cool analytics :)... </a>
         </div>

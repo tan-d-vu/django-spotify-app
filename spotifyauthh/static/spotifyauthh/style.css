@@ -2,21 +2,21 @@
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    object-fit:cover;
+    object-fit: cover;
 
 }
 
 .coverart {
     width: 200px;
     height: 200px;
-    object-fit:cover;
+    object-fit: cover;
 }
 
 
 .coverart-bg {
     width: 600px;
     height: 600px;
-    object-fit:cover;
+    object-fit: cover;
 }
 
 #top_tracks_title,
@@ -34,6 +34,56 @@
     padding-top: 20vh;
 }
 
-h1, h2, h3 { 
-    background-color: white; 
+h1,
+h2,
+h3 {
+    background-color: white;
+}
+
+/* md screen */
+@media only screen and (max-width: 768px) {
+
+    #top_tracks_title,
+    #top_albums_title,
+    #top_artists_title {
+        padding-top: 0;
+    }
+
+    .coverart {
+        width: 300px;
+        height: 300px;
+        object-fit: cover;
+    }
+
+
+    .coverart-bg {
+        width: 600px;
+        height: 600px;
+        object-fit: cover;
+    }
+
+}
+
+
+/* md screen */
+@media only screen and (max-width: 576px) {
+
+    #top_tracks_title,
+    #top_albums_title,
+    #top_artists_title {
+        padding-top: 0;
+    }
+
+    .coverart {
+        width: 150px;
+        height: 150px;
+        object-fit:cover;
+    }
+
+    .coverart-bg {
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+    }
+
 }
