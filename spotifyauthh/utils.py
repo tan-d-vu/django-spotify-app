@@ -79,6 +79,23 @@ def __parse_track(track_info):
         return None
 
 
+def __parse_album(track_info):
+    """Return album info from a payload entry"""
+    if track_info is not None:
+        try:
+            return {
+                "name": track_info["album"]["name"],
+                "images": track_info["album"]["images"][0]["url"],
+                "times_appear": 1,
+                "url": track_info["album"]["external_urls"]["spotify"],
+            }
+        except IndexError:
+            return None
+
+    else:
+        return None
+
+
 def get_top_tracks(sp):
     """Return current user's top 10 tracks, along with
         - top artists
@@ -125,12 +142,7 @@ def get_top_tracks(sp):
                 if album in albums:
                     albums[album]["times_appear"] += 1
                 else:
-                    albums[album] = {
-                        "name": album,
-                        "images": track["images"],
-                        "times_appear": 1,
-                        "url": item["album"]["external_urls"]["spotify"],
-                    }
+                    albums[album] = __parse_album(item)
             else:
                 album = "single"
 
@@ -263,80 +275,6 @@ def get_top_playlists(sp):
     return data
 
 
-def get_recent_tracks(sp):
-    """Return current user's recent listened artist + albums
-    accquired through 50 recent tracks/ however many recent tracks available
-    """
-    data = {"artists": [], "albums": [], "uri": []}
-    artists = []
-    albums = []
-
-    recent_tracks = sp.current_user_recently_played(limit=50)
-    for item in recent_tracks["items"]:
-        if (
-            item["track"] is not None
-        ):  # Has to check because apparently it can be None???
-            item = item["track"]
-
-            data["uri"].append(item["uri"])
-
-            # Only get album name if it's not a 'single'
-            if item["album"]["album_type"] != "SINGLE":
-                album = item["album"]["name"]
-                albums.append(album)
-
-            artists.append(item["artists"][0]["name"])
-
-    artists = [
-        {"artist": item[0], "times_appear": item[1]}
-        for item in Counter(artists).most_common()
-    ]
-    albums = [
-        {"album": item[0], "times_appear": item[1]}
-        for item in Counter(albums).most_common()
-    ]
-
-    data["artists"] = artists
-    data["albums"] = albums
-
-    return data
-
-
-def get_audio_features(sp, uri):
-    """Get average audio features of a set of tracks"""
-    __audio_features = {
-        "valence": 0,
-        "energy": 0,
-        "instrumentalness": 0,
-        "danceability": 0,
-        "acousticness": 0,
-    }
-
-    audio_features = []
-
-    if len(uri) < 100:
-        audio_features = sp.audio_features(uri[:100])
-    else:
-        for i in range(0, int(len(uri) / 10)):
-            audio_features.extend(sp.audio_features(uri[(100 * i) : (100 * (i + 1))]))
-
-    for feature in audio_features:
-        if feature is not None:
-            __audio_features["valence"] += float(feature["valence"])
-            __audio_features["energy"] += float(feature["energy"])
-            __audio_features["instrumentalness"] += float(feature["instrumentalness"])
-            __audio_features["danceability"] += float(feature["danceability"])
-            __audio_features["acousticness"] += float(feature["acousticness"])
-
-    __audio_features["valence"] /= len(uri)
-    __audio_features["energy"] /= len(uri)
-    __audio_features["danceability"] /= len(uri)
-    __audio_features["instrumentalness"] /= len(uri)
-    __audio_features["acousticness"] /= len(uri)
-
-    return __audio_features
-
-
 def get_top_artists(sp):
     """Get top artists and top genres"""
     data = {
@@ -371,7 +309,7 @@ def get_top_artists(sp):
             except TypeError:
                 pass
 
-        # Get first 10 top artists and list of genres of all top artists
+        # Get top artists and list of genres of all top artists
         for i, item in enumerate(results["items"]):
             if i < 30:
                 try:
@@ -386,6 +324,7 @@ def get_top_artists(sp):
                 except IndexError:
                     continue
 
+            # To use for recommendations
             data["uri"].append(item["uri"])
             genres.extend(item["genres"])
 
@@ -409,6 +348,99 @@ def get_top_artists(sp):
     return data
 
 
+def get_recent_tracks(sp):
+    """Return current user's recent listened artist + albums
+    accquired through 50 recent tracks/ however many recent tracks available
+    """
+    data = {"artists": [], "albums": [], "uri": []}
+    albums = {}
+
+    artists_id = []
+
+    recent_tracks = sp.current_user_recently_played(limit=50)
+    count = 0
+    for item in recent_tracks["items"]:
+        if (
+            item["track"] is not None
+        ):  # Has to check because apparently it can be None???
+            item = item["track"]
+
+            # Track uri to be used for audio features
+            data["uri"].append(item["uri"])
+
+            # Only get album name if it's not a 'single'
+            if item["album"]["album_type"] != "SINGLE":
+                album = item["album"]["name"]
+                if album in albums:
+                    albums[album]["times_appear"] += 1
+                if album not in albums and count < 10:
+                    albums[album] = __parse_album(item)
+                    count+=1
+            else:
+                album = "single"
+
+            # Artist id
+            artists_id.append(item["artists"][0]["id"])
+
+    artists_id = list(set(artists_id))
+
+    artists = sp.artists(artists_id)
+
+    for item in artists["artists"]:
+        try:
+            artist = {
+                "name": item["name"],
+                "images": item["images"][0]["url"],
+                "url": item["external_urls"]["spotify"],
+            }
+
+            if artist not in data["artists"]:
+                data["artists"].append(artist)
+
+        except IndexError:
+            continue
+
+    data["artists"] = data["artists"][:10]
+    data["albums"] = albums
+
+    return data
+
+
+def get_audio_features(sp, uri):
+    """Get average audio features of a set of tracks"""
+    __audio_features = {
+        "Valence": 0,
+        "Energy": 0,
+        "Instrumentalness": 0,
+        "Danceability": 0,
+        "Acousticness": 0,
+    }
+
+    audio_features = []
+
+    if len(uri) < 100:
+        audio_features = sp.audio_features(uri[:100])
+    else:
+        for i in range(0, int(len(uri) / 10)):
+            audio_features.extend(sp.audio_features(uri[(100 * i) : (100 * (i + 1))]))
+
+    for feature in audio_features:
+        if feature is not None:
+            __audio_features["Valence"] += float(feature["valence"])
+            __audio_features["Energy"] += float(feature["energy"])
+            __audio_features["Instrumentalness"] += float(feature["instrumentalness"])
+            __audio_features["Danceability"] += float(feature["danceability"])
+            __audio_features["Acousticness"] += float(feature["acousticness"])
+
+    __audio_features["Valence"] /= len(uri)
+    __audio_features["Energy"] /= len(uri)
+    __audio_features["Danceability"] /= len(uri)
+    __audio_features["Instrumentalness"] /= len(uri)
+    __audio_features["Acousticness"] /= len(uri)
+
+    return __audio_features
+
+
 # region Data visualization
 def get_polar_graph(features):
     # Return polar graph from a dict of audio features
@@ -425,21 +457,17 @@ def get_polar_graph(features):
 
 def get_overlay_polar_graph(features):
     # Return overlay polar graph from a list of dicts of audio features
-    categories = [
-        "valence",
-        "energy",
-        "danceability",
-        "instrumentalness",
-        "acousticness",
-    ]
-
     fig = go.Figure()
 
-    data = {"r": [], "theta": [], "set": []}
+    data = {"r": [], "theta": [], "Tracks: ": []}
     for i, feature in enumerate(features):
         data["r"].extend(list(feature.values()))
         data["theta"].extend(list(feature.keys()))
-        data["set"] += [str("set" + str(i))] * len(feature)
+        if i == 0:
+            data["Tracks: "] += [str("Recently Played")] * len(feature)
+        if i == 1:
+            data["Tracks: "] += [str("Top Played")] * len(feature)
+
 
     df = pd.DataFrame(data=data)
 
@@ -447,7 +475,7 @@ def get_overlay_polar_graph(features):
         df,
         r="r",
         theta="theta",
-        color="set",
+        color="Tracks: ",
         line_close=True,
         width=700,
         height=700,

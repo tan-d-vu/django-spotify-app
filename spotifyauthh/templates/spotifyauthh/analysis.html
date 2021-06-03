@@ -1,10 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <meta name="google" content="notranslate" />
     <meta http-equiv="Content-Language" content="en" />
     <!-- Bootstrap-->
@@ -140,10 +140,10 @@
     <!-- Top Artists -->
     <div class="container-fluid mt-5" id="top_artists">
       <div class="row bg-white">
-        <div class="col-lg-4">
+        <div class="col-lg-4 order-lg-2">
           <h1 class="text-end" id="top_artists_title">And you LOVE these artists.</h1>
         </div>
-        <div class="col-lg-7">
+        <div class="col-lg-7 order-lg-1">
           {% for artist in top_artists.artists %}
           <div class="pb-2 row">
             <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-5">
@@ -159,7 +159,8 @@
         </div>
       </div>
     </div>
-
+    
+    <!-- Other Logistics -->
     <div class="container-fluid" id="other_logistics">
       <div class="row mb-5">
         <h1>Some other logistics for you!</h1>
@@ -232,6 +233,58 @@
         </div>
       </div>
     </div>
+
+   <!-- Recently Played -->
+    <div class="container-fluid mt-5" id="top_recent">
+      <div class="row bg-white">
+        <div class="col-lg-4">
+          <div id="top_recent_title">
+            <h1 class="text-end">In the last few days (or maybe hours),</h1>
+            <h2 class="text-start">you seem to enjoy these artists.</h2>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          {% for artist in top_recent.artists %}
+          <div class="pb-2 row">
+            <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-5">
+              <a class="text-decoration-none text-reset" href="{{ artist.url }}" target="_blank" rel="noopener noreferrer">
+                <img class="coverart" src="{{ artist.images }}" alt="{{ artist.name }} coverart" />
+              </a>
+            </div>
+            <div class="align-self-lg-center col-lg">
+              <a class="text-decoration-none text-reset" href="{{ artist.url }}" target="_blank" rel="noopener noreferrer"> {{ artist.name }} </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Albums -->
+    <div class="container-fluid mt-5" id="recent_albums">
+      <div class="row bg-white">
+        <div class="col-lg-4 order-lg-2">
+          <h2 class="text-start" id="recent_albums_title">And these albums...</h2>
+        </div>
+
+        <div class="col-lg-7 order-lg-1">
+          {% for album, data in top_recent.albums.items %}
+          <div class="pb-2 row">
+            <div class="d-flex align-items-lg-center justify-content-lg-end col-lg-5">
+              <a class="text-decoration-none text-reset" href="{{ data.url }}" target="_blank" rel="noopener noreferrer">
+                <img class="coverart" src="{{ data.images }}" alt="{{ album }} coverart" />
+              </a>
+            </div>
+            <div class="align-self-lg-center col-lg">
+              <a class="text-decoration-none text-reset" href="{{ data.url }}" target="_blank" rel="noopener noreferrer">{{ album }} </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    
     <div class="container-fluid pt-5" id="the_end">
       <div class="pt-5 row">
         <div class="col-lg-7 pt-5">
@@ -241,9 +294,9 @@
       </div>
     </div>
 
-    {% comment %} <br />
-    <br />
-    {{ top_playlist.duration }} {{ top_playlist }}
+
+
+{% comment %} 
 
     <br />
     <br />
@@ -259,5 +312,6 @@
     {{ graph|safe }} {{ graph1|safe }} {{ graph2|safe }}
     <br />
     {{ track_rec}} {% endcomment %}
+
   </body>
 </html>
