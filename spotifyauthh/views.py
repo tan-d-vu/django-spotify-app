@@ -25,6 +25,7 @@ class HomeView(TemplateView):
         except:
             return context
 
+
 class LoginView(RedirectView):
     """Login page"""
 
@@ -105,7 +106,7 @@ class StatView(TemplateView):
             cached_stat = StatCache.objects.get(user_info=user_info_json)
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
-            ).days >= 14:
+            ).seconds >= 5:
                 raise StatCache.DoesNotExist
 
         # If not in db or been in there for long, get info from scratch and store in model
@@ -120,13 +121,13 @@ class StatView(TemplateView):
 
             top_artists = get_top_artists(sp)
 
-            cached_stat = StatCache.objects.create(
+            cached_stat = StatCache.objects.update_or_create(
                 top_artists=top_artists,
                 user_info=user_info_json,
                 top_tracks=top_tracks,
                 top_playlist=top_playlist,
                 top_audio_features=top_audio_features,
-            )
+            )[0]
             cached_stat.save()
 
         # Get recently played data
