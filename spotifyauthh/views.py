@@ -106,7 +106,7 @@ class StatView(TemplateView):
             cached_stat = StatCache.objects.get(user_info=user_info_json)
             if (
                 datetime.datetime.now(datetime.timezone.utc) - cached_stat.time_cached
-            ).seconds >= 5:
+            ).days >= 14:
                 raise StatCache.DoesNotExist
 
         # If not in db or been in there for long, get info from scratch and store in model
